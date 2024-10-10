@@ -35,6 +35,7 @@ FocusScope {
     property alias validator: valueInput.validator
     property alias maximumLength: valueInput.maximumLength
     property alias measureUnitsSymbol: measureUnitsLabel.text
+    property alias cursorPosition: valueInput.cursorPosition
 
     property alias hint: valueInput.placeholderText
     property alias hintIcon: hintIcon.iconCode
@@ -44,6 +45,9 @@ FocusScope {
     property alias textVerticalAlignment: valueInput.verticalAlignment
     property bool hasText: valueInput.text.length > 0
     property alias readOnly: valueInput.readOnly
+
+    property var onShortcutOverride
+    property var onKeyPress
 
     property real textSidePadding: 12
     property real accessoriesPadding: 4
@@ -68,6 +72,10 @@ FocusScope {
 
     function selectAll() {
         valueInput.selectAll()
+    }
+
+    function select(start, end) {
+        valueInput.select(start, end)
     }
 
     function clear() {
@@ -190,7 +198,8 @@ FocusScope {
                     return
                 }
 
-                if (textInputModel.isShortcutAllowedOverride(event.key, event.modifiers)) {
+                if ((onShortcutOverride && onShortcutOverride(event)) ||
+                     textInputModel.isShortcutAllowedOverride(event.key, event.modifiers)) {
                     event.accepted = true
                 } else {
                     event.accepted = false
@@ -201,6 +210,9 @@ FocusScope {
             }
 
             Keys.onPressed: function(event) {
+                if (onKeyPress && onKeyPress(event))
+                    return
+
                 var isAcceptKey = event.key === Qt.Key_Enter || event.key === Qt.Key_Return
                 var isEscapeKey = event.key === Qt.Key_Escape
                 if (isAcceptKey || isEscapeKey) {
