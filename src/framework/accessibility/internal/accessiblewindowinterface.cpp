@@ -26,6 +26,9 @@
 
 #include "accessibilitycontroller.h"
 
+#include "modularity/ioc.h"
+#include "../iaccessibleapprootobject.h"
+
 #include "translation.h"
 #include "log.h"
 
@@ -71,6 +74,10 @@ QRect AccessibleWindowInterface::rect() const
 
 QAccessibleInterface* AccessibleWindowInterface::parent() const
 {
+    auto appRoot = muse::modularity::globalIoc()->resolve<IAccessibleAppRootObject>("accessibility");
+    if (m_window && appRoot && appRoot->windowRoot(m_window)) {
+        return QAccessible::queryAccessibleInterface(appRoot->asQObject());
+    }
     return nullptr;
 }
 
@@ -103,7 +110,16 @@ QAccessibleInterface* AccessibleWindowInterface::childAt(int, int) const
 
 QAccessibleInterface* AccessibleWindowInterface::focusChild() const
 {
-    QAccessibleInterface* child = m_children->controller().lock()->focusedChild(m_children->item());
+    if (!m_children) {
+        return nullptr;
+    }
+
+    auto controller = m_children->controller().lock();
+    if (!controller) {
+        return nullptr;
+    }
+
+    QAccessibleInterface* child = controller->focusedChild(m_children->item());
     MYLOG() << "item: " << m_children->item()->accessibleName() << ", focused child: " << (child ? child->text(QAccessible::Name) : "null");
     return child;
 }
