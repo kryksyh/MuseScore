@@ -840,7 +840,7 @@ int AccessibilityController::indexOfChild(const IAccessible* item, const QAccess
     for (size_t i = 0; i < count; ++i) {
         const IAccessible* ch = item->accessibleChild(i);
         const Item& chIt = findItem(ch);
-        IF_ASSERT_FAILED(chIt.isValid()) {
+        if (!chIt.isValid()) {
             continue;
         }
 
