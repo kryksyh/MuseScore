@@ -143,6 +143,7 @@ static QAccessibleInterface* muAccessibleFactory(const QString& classname, QObje
 void AccessibilityController::init()
 {
     QAccessible::installFactory(muAccessibleFactory);
+    appRootObject()->setup();
 
     reg(this);
     const Item& self = findItem(this);
@@ -154,6 +155,7 @@ void AccessibilityController::init()
         if (w) {
             appRootObject()->registerWindow(w, windowRoot);
         }
+        m_treeConnected = true;
     });
 
     auto dispatcher = actionsDispatcher();
@@ -533,6 +535,10 @@ void AccessibilityController::stateChanged(IAccessible* aitem, State state, bool
 
 void AccessibilityController::sendEvent(QAccessibleEvent* ev)
 {
+    if (!m_treeConnected) {
+        return;
+    }
+
 #ifdef MUSE_MODULE_ACCESSIBILITY_TRACE
     AccessibleObject* obj = qobject_cast<AccessibleObject*>(ev->object());
     MYLOG() << "object: " << obj->item()->accessibleName() << ", event: " << int(ev->type());

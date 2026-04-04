@@ -191,6 +191,7 @@ private:
 
     bool m_inited = false;
     bool m_enabled = false;
+    bool m_treeConnected = false;
 
     bool m_ignorePanelChangingVoice = false;
     bool m_needToVoicePanelInfo = false;
