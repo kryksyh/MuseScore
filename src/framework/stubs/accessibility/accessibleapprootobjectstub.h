@@ -27,6 +27,7 @@ namespace muse::accessibility {
 class AccessibleAppRootObjectStub : public IAccessibleAppRootObject
 {
 public:
+    void setup() override {}
     QObject* asQObject() override { return nullptr; }
     void registerWindow(QWindow*, AccessibleObject*) override {}
     void unregisterWindow(QWindow*) override {}
@@ -34,6 +35,8 @@ public:
     QWindow* windowAt(int) const override { return nullptr; }
     AccessibleObject* windowRoot(int) const override { return nullptr; }
     AccessibleObject* windowRoot(QWindow*) const override { return nullptr; }
+    QAccessibleInterface* windowIface(int) const override { return nullptr; }
+    QAccessibleInterface* windowIface(QWindow*) const override { return nullptr; }
     bool isAccessibilityActive() const override { return false; }
 };
 }

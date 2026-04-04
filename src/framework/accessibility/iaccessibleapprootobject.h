@@ -23,6 +23,7 @@
 
 #include "modularity/imoduleinterface.h"
 
+class QAccessibleInterface;
 class QObject;
 class QWindow;
 
@@ -35,6 +36,8 @@ class IAccessibleAppRootObject : MODULE_GLOBAL_INTERFACE
 public:
     virtual ~IAccessibleAppRootObject() = default;
 
+    virtual void setup() = 0;
+
     virtual QObject* asQObject() = 0;
 
     virtual void registerWindow(QWindow* window, AccessibleObject* windowRoot) = 0;
@@ -44,6 +47,8 @@ public:
     virtual QWindow* windowAt(int index) const = 0;
     virtual AccessibleObject* windowRoot(int index) const = 0;
     virtual AccessibleObject* windowRoot(QWindow* window) const = 0;
+    virtual QAccessibleInterface* windowIface(int index) const = 0;
+    virtual QAccessibleInterface* windowIface(QWindow* window) const = 0;
 
     virtual bool isAccessibilityActive() const = 0;
 };

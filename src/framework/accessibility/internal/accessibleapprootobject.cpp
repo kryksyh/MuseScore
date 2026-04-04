@@ -25,6 +25,7 @@
 #include <QGuiApplication>
 
 #include "accessibleapprootinterface.h"
+#include "accessiblewindowinterface.h"
 
 #include "log.h"
 
@@ -51,6 +52,14 @@ AccessibleAppRootObject::AccessibleAppRootObject()
 {
     s_activationObserver = new AccessibilityActivationObserver();
     QAccessible::installActivationObserver(s_activationObserver);
+}
+
+void AccessibleAppRootObject::setup()
+{
+    if (m_setupDone) {
+        return;
+    }
+    m_setupDone = true;
 
     QAccessible::installRootObjectHandler(nullptr);
     QAccessible::setRootObject(this);
@@ -90,13 +99,14 @@ void AccessibleAppRootObject::registerWindow(QWindow* window, AccessibleObject* 
         }
     }
 
-    m_windows.append({ window, windowRoot });
+    m_windows.append({ window, windowRoot, new AccessibleWindowInterface(window, windowRoot) });
 }
 
 void AccessibleAppRootObject::unregisterWindow(QWindow* window)
 {
     for (int i = 0; i < m_windows.size(); ++i) {
         if (m_windows[i].window == window) {
+            QAccessible::deleteAccessibleInterface(QAccessible::uniqueId(m_windows[i].iface));
             m_windows.removeAt(i);
             return;
         }
@@ -129,6 +139,24 @@ AccessibleObject* AccessibleAppRootObject::windowRoot(QWindow* window) const
     for (const WindowEntry& entry : m_windows) {
         if (entry.window == window) {
             return entry.windowRoot;
+        }
+    }
+    return nullptr;
+}
+
+QAccessibleInterface* AccessibleAppRootObject::windowIface(int index) const
+{
+    if (index < 0 || index >= m_windows.size()) {
+        return nullptr;
+    }
+    return m_windows[index].iface;
+}
+
+QAccessibleInterface* AccessibleAppRootObject::windowIface(QWindow* window) const
+{
+    for (const WindowEntry& entry : m_windows) {
+        if (entry.window == window) {
+            return entry.iface;
         }
     }
     return nullptr;

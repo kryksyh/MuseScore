@@ -25,7 +25,6 @@
 #include <QGuiApplication>
 
 #include "accessibleapprootobject.h"
-#include "accessiblewindowinterface.h"
 
 using namespace muse::accessibility;
 
@@ -70,13 +69,7 @@ QAccessibleInterface* AccessibleAppRootInterface::child(int index) const
         return nullptr;
     }
 
-    QWindow* window = m_root->windowAt(index);
-    AccessibleObject* windowRoot = m_root->windowRoot(index);
-    if (!window || !windowRoot) {
-        return nullptr;
-    }
-
-    return new AccessibleWindowInterface(window, windowRoot);
+    return m_root->windowIface(index);
 }
 
 int AccessibleAppRootInterface::indexOfChild(const QAccessibleInterface* iface) const

@@ -28,6 +28,8 @@
 #include "../iaccessibleapprootobject.h"
 #include "accessibleobject.h"
 
+class QAccessibleInterface;
+
 namespace muse::accessibility {
 class AccessibleAppRootObject : public QObject, public IAccessibleAppRootObject
 {
@@ -38,6 +40,8 @@ public:
 
     static QAccessibleInterface* accessibleInterface(QObject* object);
 
+    void setup() override;
+
     QObject* asQObject() override;
 
     void registerWindow(QWindow* window, AccessibleObject* windowRoot) override;
@@ -47,6 +51,8 @@ public:
     QWindow* windowAt(int index) const override;
     AccessibleObject* windowRoot(int index) const override;
     AccessibleObject* windowRoot(QWindow* window) const override;
+    QAccessibleInterface* windowIface(int index) const override;
+    QAccessibleInterface* windowIface(QWindow* window) const override;
 
     bool isAccessibilityActive() const override;
 
@@ -55,8 +61,10 @@ private:
     struct WindowEntry {
         QWindow* window = nullptr;
         AccessibleObject* windowRoot = nullptr;
+        QAccessibleInterface* iface = nullptr;
     };
 
     QList<WindowEntry> m_windows;
+    bool m_setupDone = false;
 };
 }

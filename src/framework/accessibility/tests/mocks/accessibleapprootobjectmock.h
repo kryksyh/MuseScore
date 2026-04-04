@@ -29,6 +29,7 @@ namespace muse::accessibility {
 class AccessibleAppRootObjectMock : public IAccessibleAppRootObject
 {
 public:
+    MOCK_METHOD(void, setup, (), (override));
     MOCK_METHOD(QObject*, asQObject, (), (override));
     MOCK_METHOD(void, registerWindow, (QWindow*, AccessibleObject*), (override));
     MOCK_METHOD(void, unregisterWindow, (QWindow*), (override));
@@ -36,6 +37,8 @@ public:
     MOCK_METHOD(QWindow*, windowAt, (int), (const, override));
     MOCK_METHOD(AccessibleObject*, windowRoot, (int), (const, override));
     MOCK_METHOD(AccessibleObject*, windowRoot, (QWindow*), (const, override));
+    MOCK_METHOD(QAccessibleInterface*, windowIface, (int), (const, override));
+    MOCK_METHOD(QAccessibleInterface*, windowIface, (QWindow*), (const, override));
     MOCK_METHOD(bool, isAccessibilityActive, (), (const, override));
 };
 }
