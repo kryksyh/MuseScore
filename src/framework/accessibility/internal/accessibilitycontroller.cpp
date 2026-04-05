@@ -800,10 +800,7 @@ QAccessibleInterface* AccessibilityController::parentIface(const IAccessible* it
         }
 
         if (w) {
-            QAccessibleInterface* iface = appRootObject()->windowIface(w);
-            if (iface) {
-                return iface;
-            }
+            return QAccessible::queryAccessibleInterface(w);
         }
 
         return nullptr;
