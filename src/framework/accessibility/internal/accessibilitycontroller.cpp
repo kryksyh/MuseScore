@@ -80,7 +80,21 @@ QAccessibleInterface* AccessibilityController::accessibleInterface(QObject* wind
         return nullptr;
     }
 
-    AccessibleObject* windowRoot = appRoot->windowRoot();
+    AccessibleObject* windowRoot = nullptr;
+    QWindow* w = qwindow;
+    while (w) {
+        windowRoot = appRoot->windowRoot(w);
+        if (windowRoot) {
+            break;
+        }
+        w = w->transientParent();
+    }
+
+    // Fallback: window not yet associated (init phase), use pending root
+    if (!windowRoot) {
+        windowRoot = appRoot->pendingWindowRoot();
+    }
+
     if (!windowRoot) {
         return nullptr;
     }
@@ -133,22 +147,26 @@ static QAccessibleInterface* muAccessibleFactory(const QString& classname, QObje
 
 void AccessibilityController::init()
 {
-    QAccessible::installFactory(muAccessibleFactory);
-    appRootObject()->setup();
+    static bool s_globalInitDone = false;
+    if (!s_globalInitDone) {
+        s_globalInitDone = true;
+        QAccessible::installFactory(muAccessibleFactory);
+        appRootObject()->setup();
+    }
 
     reg(this);
     const Item& self = findItem(this);
 
-    // Set the window root immediately so the factory can return a valid
+    // Register the window root immediately so the factory can return a valid
     // interface even before the QWindow is available.
-    appRootObject()->setWindowRoot(self.object);
+    appRootObject()->registerWindowRoot(self.object);
 
     // init() is called when the window is being created, and is not available yet,
-    // delay the registration
-    async::Async::call(this, [this]() {
+    // delay the window association
+    async::Async::call(this, [this, windowRoot = self.object]() {
         QWindow* w = mainWindow()->qWindow();
         if (w) {
-            appRootObject()->registerWindow(w);
+            appRootObject()->registerWindow(w, windowRoot);
         }
         m_treeConnected = true;
     });

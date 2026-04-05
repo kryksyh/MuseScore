@@ -106,6 +106,7 @@ QAccessibleInterface* AccessibleAppRootInterface::focusChild() const
                 QAccessibleInterface* focusedChild = windowIface->focusChild();
                 return focusedChild ? focusedChild : windowIface;
             }
+            return nullptr;
         }
     }
 

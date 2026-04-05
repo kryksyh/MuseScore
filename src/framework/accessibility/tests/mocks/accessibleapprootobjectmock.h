@@ -31,12 +31,13 @@ class AccessibleAppRootObjectMock : public IAccessibleAppRootObject
 public:
     MOCK_METHOD(void, setup, (), (override));
     MOCK_METHOD(QObject*, asQObject, (), (override));
-    MOCK_METHOD(void, setWindowRoot, (AccessibleObject*), (override));
-    MOCK_METHOD(AccessibleObject*, windowRoot, (), (const, override));
-    MOCK_METHOD(void, registerWindow, (QWindow*), (override));
+    MOCK_METHOD(void, registerWindowRoot, (AccessibleObject*), (override));
+    MOCK_METHOD(AccessibleObject*, pendingWindowRoot, (), (const, override));
+    MOCK_METHOD(void, registerWindow, (QWindow*, AccessibleObject*), (override));
     MOCK_METHOD(void, unregisterWindow, (QWindow*), (override));
     MOCK_METHOD(int, windowCount, (), (const, override));
     MOCK_METHOD(QWindow*, windowAt, (int), (const, override));
+    MOCK_METHOD(AccessibleObject*, windowRoot, (QWindow*), (const, override));
     MOCK_METHOD(QAccessibleInterface*, windowIface, (int), (const, override));
     MOCK_METHOD(QAccessibleInterface*, windowIface, (QWindow*), (const, override));
     MOCK_METHOD(bool, isAccessibilityActive, (), (const, override));

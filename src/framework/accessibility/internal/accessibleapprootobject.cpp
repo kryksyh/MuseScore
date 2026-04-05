@@ -85,42 +85,48 @@ QAccessibleInterface* AccessibleAppRootObject::accessibleInterface(QObject* obje
     return new AccessibleAppRootInterface(root);
 }
 
-void AccessibleAppRootObject::setWindowRoot(AccessibleObject* root)
+void AccessibleAppRootObject::registerWindowRoot(AccessibleObject* windowRoot)
 {
-    m_windowRoot = root;
+    m_pendingRoot = windowRoot;
 }
 
-AccessibleObject* AccessibleAppRootObject::windowRoot() const
+AccessibleObject* AccessibleAppRootObject::pendingWindowRoot() const
 {
-    return m_windowRoot;
+    return m_pendingRoot;
 }
 
-void AccessibleAppRootObject::registerWindow(QWindow* window)
+void AccessibleAppRootObject::registerWindow(QWindow* window, AccessibleObject* windowRoot)
 {
-    if (!window) {
+    if (!window || !windowRoot) {
         return;
     }
 
-    if (m_windows.contains(window)) {
-        LOGW() << "Window already registered";
-        return;
+    for (const WindowEntry& entry : m_windows) {
+        if (entry.window == window) {
+            LOGW() << "Window already registered";
+            return;
+        }
     }
 
-    m_windows.append(window);
+    if (m_pendingRoot == windowRoot) {
+        m_pendingRoot = nullptr;
+    }
+
+    m_windows.append({ window, windowRoot });
 }
 
 void AccessibleAppRootObject::unregisterWindow(QWindow* window)
 {
-    int i = m_windows.indexOf(window);
-    if (i < 0) {
-        return;
+    for (int i = 0; i < m_windows.size(); ++i) {
+        if (m_windows[i].window == window) {
+            QAccessibleInterface* iface = QAccessible::queryAccessibleInterface(window);
+            if (iface) {
+                QAccessible::deleteAccessibleInterface(QAccessible::uniqueId(iface));
+            }
+            m_windows.removeAt(i);
+            return;
+        }
     }
-
-    QAccessibleInterface* iface = QAccessible::queryAccessibleInterface(window);
-    if (iface) {
-        QAccessible::deleteAccessibleInterface(QAccessible::uniqueId(iface));
-    }
-    m_windows.removeAt(i);
 }
 
 int AccessibleAppRootObject::windowCount() const
@@ -133,20 +139,31 @@ QWindow* AccessibleAppRootObject::windowAt(int index) const
     if (index < 0 || index >= m_windows.size()) {
         return nullptr;
     }
-    return m_windows[index];
+    return m_windows[index].window;
+}
+
+AccessibleObject* AccessibleAppRootObject::windowRoot(QWindow* window) const
+{
+    for (const WindowEntry& entry : m_windows) {
+        if (entry.window == window) {
+            return entry.windowRoot;
+        }
+    }
+    return nullptr;
 }
 
 QAccessibleInterface* AccessibleAppRootObject::windowIface(int index) const
 {
-    if (index < 0 || index >= m_windows.size()) {
+    QWindow* w = windowAt(index);
+    if (!w) {
         return nullptr;
     }
-    return QAccessible::queryAccessibleInterface(m_windows[index]);
+    return QAccessible::queryAccessibleInterface(w);
 }
 
 QAccessibleInterface* AccessibleAppRootObject::windowIface(QWindow* window) const
 {
-    if (!m_windows.contains(window)) {
+    if (!windowRoot(window)) {
         return nullptr;
     }
     return QAccessible::queryAccessibleInterface(window);
