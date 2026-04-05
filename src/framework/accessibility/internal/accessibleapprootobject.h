@@ -44,13 +44,14 @@ public:
 
     QObject* asQObject() override;
 
-    void registerWindow(QWindow* window, AccessibleObject* windowRoot) override;
+    void setWindowRoot(AccessibleObject* root) override;
+    AccessibleObject* windowRoot() const override;
+
+    void registerWindow(QWindow* window) override;
     void unregisterWindow(QWindow* window) override;
 
     int windowCount() const override;
     QWindow* windowAt(int index) const override;
-    AccessibleObject* windowRoot(int index) const override;
-    AccessibleObject* windowRoot(QWindow* window) const override;
     QAccessibleInterface* windowIface(int index) const override;
     QAccessibleInterface* windowIface(QWindow* window) const override;
 
@@ -58,13 +59,8 @@ public:
 
 private:
 
-    struct WindowEntry {
-        QWindow* window = nullptr;
-        AccessibleObject* windowRoot = nullptr;
-        QAccessibleInterface* iface = nullptr;
-    };
-
-    QList<WindowEntry> m_windows;
+    QList<QWindow*> m_windows;
+    AccessibleObject* m_windowRoot = nullptr;
     bool m_setupDone = false;
 };
 }

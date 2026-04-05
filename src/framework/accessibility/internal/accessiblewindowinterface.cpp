@@ -75,7 +75,7 @@ QRect AccessibleWindowInterface::rect() const
 QAccessibleInterface* AccessibleWindowInterface::parent() const
 {
     auto appRoot = muse::modularity::globalIoc()->resolve<IAccessibleAppRootObject>("accessibility");
-    if (m_window && appRoot && appRoot->windowRoot(m_window)) {
+    if (m_window && appRoot && appRoot->windowRoot()) {
         return QAccessible::queryAccessibleInterface(appRoot->asQObject());
     }
     return nullptr;

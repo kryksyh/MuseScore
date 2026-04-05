@@ -40,13 +40,14 @@ public:
 
     virtual QObject* asQObject() = 0;
 
-    virtual void registerWindow(QWindow* window, AccessibleObject* windowRoot) = 0;
+    virtual void setWindowRoot(AccessibleObject* root) = 0;
+    virtual AccessibleObject* windowRoot() const = 0;
+
+    virtual void registerWindow(QWindow* window) = 0;
     virtual void unregisterWindow(QWindow* window) = 0;
 
     virtual int windowCount() const = 0;
     virtual QWindow* windowAt(int index) const = 0;
-    virtual AccessibleObject* windowRoot(int index) const = 0;
-    virtual AccessibleObject* windowRoot(QWindow* window) const = 0;
     virtual QAccessibleInterface* windowIface(int index) const = 0;
     virtual QAccessibleInterface* windowIface(QWindow* window) const = 0;
 

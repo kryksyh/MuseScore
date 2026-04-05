@@ -80,16 +80,7 @@ QAccessibleInterface* AccessibilityController::accessibleInterface(QObject* wind
         return nullptr;
     }
 
-    AccessibleObject* windowRoot = nullptr;
-    QWindow* w = qwindow;
-    while (w) {
-        windowRoot = appRoot->windowRoot(w);
-        if (windowRoot) {
-            break;
-        }
-        w = w->transientParent();
-    }
-
+    AccessibleObject* windowRoot = appRoot->windowRoot();
     if (!windowRoot) {
         return nullptr;
     }
@@ -148,12 +139,16 @@ void AccessibilityController::init()
     reg(this);
     const Item& self = findItem(this);
 
+    // Set the window root immediately so the factory can return a valid
+    // interface even before the QWindow is available.
+    appRootObject()->setWindowRoot(self.object);
+
     // init() is called when the window is being created, and is not available yet,
     // delay the registration
-    async::Async::call(this, [this, windowRoot = self.object]() {
+    async::Async::call(this, [this]() {
         QWindow* w = mainWindow()->qWindow();
         if (w) {
-            appRootObject()->registerWindow(w, windowRoot);
+            appRootObject()->registerWindow(w);
         }
         m_treeConnected = true;
     });

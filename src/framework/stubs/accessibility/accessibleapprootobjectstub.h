@@ -29,12 +29,12 @@ class AccessibleAppRootObjectStub : public IAccessibleAppRootObject
 public:
     void setup() override {}
     QObject* asQObject() override { return nullptr; }
-    void registerWindow(QWindow*, AccessibleObject*) override {}
+    void setWindowRoot(AccessibleObject*) override {}
+    AccessibleObject* windowRoot() const override { return nullptr; }
+    void registerWindow(QWindow*) override {}
     void unregisterWindow(QWindow*) override {}
     int windowCount() const override { return 0; }
     QWindow* windowAt(int) const override { return nullptr; }
-    AccessibleObject* windowRoot(int) const override { return nullptr; }
-    AccessibleObject* windowRoot(QWindow*) const override { return nullptr; }
     QAccessibleInterface* windowIface(int) const override { return nullptr; }
     QAccessibleInterface* windowIface(QWindow*) const override { return nullptr; }
     bool isAccessibilityActive() const override { return false; }
