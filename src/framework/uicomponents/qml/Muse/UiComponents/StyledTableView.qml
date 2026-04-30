@@ -208,7 +208,7 @@ Item {
                 verticalAlignment: Text.AlignVCenter
 
                 elide: Text.ElideRight
-                text: display.title
+                text: display ? display.title : ""
             }
 
             Rectangle {

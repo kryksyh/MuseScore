@@ -393,7 +393,7 @@ TableViewDelegate {
                 signal changed(string newVal)
                 signal editingFinished()
 
-                model: val
+                model: val && val.length !== undefined ? val : []
 
                 textRole: "value"
                 currentIndex: root.itemData.current === "" ? 0 : indexOfValue(root.itemData.current)
@@ -515,7 +515,7 @@ TableViewDelegate {
                             signal changed(string stub)
                             signal editingFinished()
 
-                            text: root.cellType === TableViewCellType.List ? root.itemData.current : val
+                            text: (root.cellType === TableViewCellType.List ? root.itemData.current : val) || ""
                             textFormat: Text.PlainText
                             horizontalAlignment: Text.AlignLeft
                             displayTruncatedTextOnHover: root.displayTruncatedTextOnHover
