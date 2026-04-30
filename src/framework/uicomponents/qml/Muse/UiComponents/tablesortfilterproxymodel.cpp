@@ -89,21 +89,21 @@ void TableSortFilterProxyModel::toggleColumnSort(int column)
 
     if (it == m_sortPipeline.end()) {
         m_sortPipeline.push_back({ column, true });
-    } else if (it == m_sortPipeline.end() - 1) {
+        m_sortIconColumn = column;
+    } else if (it == m_sortPipeline.end() - 1 && m_sortIconColumn == column) {
         // Only cycle through sort order if this column is already the primary sort key
         if (!it->ascending) {
             // descending -> unsorted state transition ; just remove from the sort pipeline.
             m_sortPipeline.erase(it);
+            m_sortIconColumn = -1;
         } else {
             it->ascending = false;
         }
     } else {
-        const bool ascending = it->ascending;
         m_sortPipeline.erase(it);
-        m_sortPipeline.push_back({ column, ascending });
+        m_sortPipeline.push_back({ column, true });
+        m_sortIconColumn = column;
     }
-
-    m_sortIconColumn = column;
 
     reapplySort();
 }
