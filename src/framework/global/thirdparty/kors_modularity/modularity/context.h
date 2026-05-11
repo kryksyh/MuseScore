@@ -24,6 +24,7 @@ SOFTWARE.
 #ifndef KORS_MODULARITY_CONTEXT_H
 #define KORS_MODULARITY_CONTEXT_H
 
+#include <cstdint>
 #include <memory>
 #include <functional>
 

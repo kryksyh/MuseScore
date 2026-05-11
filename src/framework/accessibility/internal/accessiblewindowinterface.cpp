@@ -59,6 +59,11 @@ AccessibleObject* AccessibleWindowInterface::resolveWindowRoot() const
         return nullptr;
     }
 
+#ifdef Q_OS_LINUX
+    // On Linux do not walk transientParent to prevent Orca frow re-interperting
+    // the whole window tree, that results in VO delay.
+    return appRoot->windowRoot(m_window);
+#else
     QWindow* w = m_window;
     while (w) {
         if (AccessibleObject* root = appRoot->windowRoot(w)) {
@@ -67,6 +72,7 @@ AccessibleObject* AccessibleWindowInterface::resolveWindowRoot() const
         w = w->transientParent();
     }
     return nullptr;
+#endif
 }
 
 bool AccessibleWindowInterface::isValid() const
