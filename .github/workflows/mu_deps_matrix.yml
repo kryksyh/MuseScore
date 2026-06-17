@@ -1,0 +1,164 @@
+name: '[MU] Deps matrix'
+
+# Validates muse_deps consumption in every delivery mode x platform, in parallel:
+#   prebuilt  - lock-verified prebuilt archives (default)
+#   source    - rebuild every dep from source (EXTDEPS_OVERRIDE_ALL=REBUILD)
+#   system    - Linux only: consume the distro's system libraries (EXTDEPS_OVERRIDE_ALL=SYSTEM)
+# Configure + build only (direct cmake, no packaging/sentry/publish). Mirrors
+# Audacity's au4_deps_matrix. Source deps (vst3sdk/liblouis/pugixml/...) always
+# compile from the pinned source; system mode only affects library deps.
+
+on:
+  workflow_dispatch:
+  # workflow_dispatch only registers on the default branch; trigger from a
+  # feature branch by pushing it to the dedicated `deps-matrix-ci` branch.
+  push:
+    branches: [deps-matrix-ci]
+
+concurrency:
+  group: mu-deps-matrix-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.runner }} ${{ matrix.arch }} · ${{ matrix.mode }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: linux,   mode: prebuilt, arch: x86_64,  runner: ubuntu-24.04,     qt_host: linux,       qt_arch: linux_gcc_64 }
+          - { os: linux,   mode: source,   arch: x86_64,  runner: ubuntu-24.04,     qt_host: linux,       qt_arch: linux_gcc_64 }
+          - { os: linux,   mode: system,   arch: x86_64,  runner: ubuntu-24.04,     qt_host: linux,       qt_arch: linux_gcc_64 }
+          - { os: linux,   mode: system-mnx, arch: x86_64, runner: ubuntu-24.04,    qt_host: linux,       qt_arch: linux_gcc_64 }
+          - { os: linux,   mode: prebuilt, arch: aarch64, runner: ubuntu-24.04-arm, qt_host: linux_arm64, qt_arch: linux_gcc_arm64 }
+          - { os: linux,   mode: source,   arch: aarch64, runner: ubuntu-24.04-arm, qt_host: linux_arm64, qt_arch: linux_gcc_arm64 }
+          - { os: macos,   mode: prebuilt, arch: universal, osx_arch: 'x86_64;arm64', runner: macos-26,  qt_host: mac,     qt_arch: clang_64 }
+          - { os: macos,   mode: source,   arch: universal, osx_arch: 'x86_64;arm64', runner: macos-26,  qt_host: mac,     qt_arch: clang_64 }
+          - { os: windows, mode: prebuilt, arch: x86_64,  runner: windows-2025,     qt_host: windows,     qt_arch: win64_msvc2022_64 }
+          - { os: windows, mode: source,   arch: x86_64,  runner: windows-2025,     qt_host: windows,     qt_arch: win64_msvc2022_64 }
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Setup MSVC
+        if: matrix.os == 'windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.10.2'
+          host: ${{ matrix.qt_host }}
+          target: 'desktop'
+          arch: ${{ matrix.qt_arch }}
+          modules: 'qt5compat qtnetworkauth qtshadertools qtwebsockets'
+          cache: true
+
+      - name: Platform setup (system libs)
+        shell: bash
+        run: |
+          case "${{ matrix.os }}" in
+            linux)
+              sudo apt-get update
+              sudo apt-get install -y ninja-build libasound2-dev
+              ;;
+            macos)   brew install ninja ;;
+            windows) choco install ninja -y ;;
+          esac
+
+      - name: Select dependency mode (${{ matrix.mode }})
+        shell: bash
+        run: |
+          case "${{ matrix.mode }}" in
+            source)
+              echo "MODE_ARGS=-DEXTDEPS_OVERRIDE_ALL=REBUILD" >> "$GITHUB_ENV"
+              ;;
+            system)
+              # Library deps + the system-capable source deps (pugixml, utf8cpp)
+              # from the distro. fdk-aac lives in multiverse.
+              sudo add-apt-repository -y multiverse
+              sudo apt-get update
+              sudo apt-get install -y \
+                libogg-dev libvorbis-dev libflac-dev libflac++-dev libopus-dev libopusenc-dev \
+                libmp3lame-dev libsndfile1-dev libfdk-aac-dev \
+                libfreetype-dev libharfbuzz-dev zlib1g-dev \
+                libpugixml-dev libutfcpp-dev
+              # The experimental .mnx chain (nlohmann_json 3.12.0 + json_schema_validator
+              # + mnxdom) has no ubuntu packages at the required versions, so disable that
+              # module here. The archlinux job below exercises it against system libs.
+              echo "MODE_ARGS=-DEXTDEPS_OVERRIDE_ALL=SYSTEM -DMUE_BUILD_IMPEXP_MNX_MODULE=OFF" >> "$GITHUB_ENV"
+              ;;
+            system-mnx)
+              # Mixed: system base, but the .mnx chain (nlohmann_json 3.12 /
+              # json_schema_validator / mnxdom) vendored. The realistic path for a
+              # fixed-release distro that wants mnx but lacks nlohmann_json 3.12.
+              # xxd is mnxdom's schema-embed tool.
+              sudo add-apt-repository -y multiverse
+              sudo apt-get update
+              sudo apt-get install -y \
+                libogg-dev libvorbis-dev libflac-dev libflac++-dev libopus-dev libopusenc-dev \
+                libmp3lame-dev libsndfile1-dev libfdk-aac-dev \
+                libfreetype-dev libharfbuzz-dev zlib1g-dev \
+                libpugixml-dev libutfcpp-dev xxd
+              echo "MODE_ARGS=-DEXTDEPS_OVERRIDE_ALL=SYSTEM -DEXTDEPS_OVERRIDE_NLOHMANN_JSON=REBUILD -DEXTDEPS_OVERRIDE_JSON_SCHEMA_VALIDATOR=REBUILD -DEXTDEPS_OVERRIDE_MNXDOM=REBUILD" >> "$GITHUB_ENV"
+              ;;
+            prebuilt)
+              echo "MODE_ARGS=" >> "$GITHUB_ENV"
+              ;;
+          esac
+
+      - name: Configure
+        shell: bash
+        run: |
+          cmake -S . -B build.ci -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE="$QT_ROOT_DIR/lib/cmake/Qt6/qt.toolchain.cmake" \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DMUE_DOWNLOAD_SOUNDFONT=OFF \
+            -DMUSE_ENABLE_UNIT_TESTS=OFF \
+            ${{ matrix.osx_arch && format('"-DCMAKE_OSX_ARCHITECTURES={0}"', matrix.osx_arch) || '' }} \
+            ${MODE_ARGS}
+
+      - name: Build
+        shell: bash
+        run: cmake --build build.ci
+
+  # Arch is rolling and ships nlohmann-json 3.12.0 + json-schema-validator, so
+  # unlike ubuntu it CAN build the experimental .mnx chain against system libs
+  # (this is how Arch's own musescore package does it). Runs in an arch container.
+  build-arch-system:
+    name: archlinux x86_64 · system + mnx
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Install toolchain + system deps (pacman)
+        run: |
+          pacman -Syu --noconfirm --needed \
+            base-devel cmake ninja git tinyxxd \
+            qt6-base qt6-declarative qt6-svg qt6-5compat qt6-networkauth \
+            qt6-websockets qt6-shadertools qt6-scxml qt6-tools \
+            alsa-lib libogg libvorbis flac opus libopusenc lame libsndfile \
+            libfdk-aac freetype2 harfbuzz zlib pugixml utf8cpp \
+            nlohmann-json json-schema-validator mnxdom
+
+      - name: Clone repository
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Configure (system libs, mnx enabled)
+        # PIC so the static qrc objects reference Qt 6.11's protected
+        # qt_resourceFeatureZstd via the GOT, else ld emits a copy relocation
+        # against it (Arch's makepkg builds PIE/PIC; raw cmake here doesn't).
+        run: |
+          cmake -S . -B build.ci -G Ninja \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+            -DMUE_DOWNLOAD_SOUNDFONT=OFF \
+            -DMUSE_ENABLE_UNIT_TESTS=OFF \
+            -DEXTDEPS_OVERRIDE_ALL=SYSTEM
+
+      - name: Build
+        run: cmake --build build.ci
